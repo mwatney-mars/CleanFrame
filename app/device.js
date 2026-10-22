@@ -1,74 +1,159 @@
-/* Public Tizen application APIs. No Mac server, network address or credentials. */
+/* Android TV / Google TV bridge (`window.AndroidBridge`) with web preview fallback. */
 (function () {
   'use strict';
   var IDS = {
-    stremio: 'IkWsFHtOY9.Stremio', netflix: 'org.tizen.netflix-app',
-    disneyplus: 'MCmYXNxgcu.DisneyPlus', youtube: '9Ur5IzDKqV.TizenYouTube',
-    appletv: 'com.samsung.tv.aria-video', primevideo: 'org.tizen.primevideo',
-    abciview: 'mWK87Xghap.ABCiview', sbs: 'OyE7OuxlUi.SBSOnDemand',
-    applemusic: 'org.tizen.apple.apple-music'
+    youtube: 'com.google.android.youtube.tv',
+    netflix: 'com.netflix.ninja',
+    disneyplus: 'com.disney.disneyplus',
+    primevideo: 'com.amazon.amazonvideo.livingroom',
+    appletv: 'com.apple.atve.androidtv.appletv',
+    stremio: 'com.stremio.one',
+    plex: 'com.plexapp.android',
+    youtubemusic: 'com.google.android.youtube.tvmusic',
+    applemusic: 'com.apple.android.music'
   };
-  var STREAMING = ['as6cYRgkPy.Binge', '73iTZRTc34.Stan', '5b8c3eb16b.BeamCTVDev',
-    'KaLitts8bq.tenplaySamsungTizen', 'eYuOiOLYQX.KayoSports', 'Ne2ZsPWdKl.9NOW',
-    '3KA0pm7a7V.TubiTV', 'rJeHak5zRg.Spotify', 'icp4AvUPiA.7plus'];
-  var CONSUMER_SYSTEM = ['org.tizen.browser', 'com.microsoft.copilot'];
-  var EXTRA_BRANDS = {'rJeHak5zRg.Spotify': 'spotify', '5b8c3eb16b.BeamCTVDev': 'hbomax', '3KA0pm7a7V.TubiTV': 'tubi'};
-  var INTERNAL = ['adplatform.ADPlayer', 'WykOS4t4F0.cmsWebApp', '25emanual3.emanual',
-    'ZODRT12q2l.WebAccountExtension', 'ByJlgt0XeD.CastSettingsApp', 'tv6pbVMQFF.PrivacyChoices'];
-  var SELF = 'nClrkHome1.FrameHome';
-  function api() { return window.tizen && window.tizen.application; }
+  var EXTRA_BRANDS = {
+    'com.spotify.tv.android': 'spotify',
+    'com.spotify.music': 'spotify',
+    'com.wbd.stream': 'hbomax',
+    'com.hbo.hbonow': 'hbomax',
+    'com.tubitv': 'tubi',
+    'com.esaba.downloader': 'downloader',
+    'au.net.abc.iview': 'abciview',
+    'com.sbs.ondemand.tv': 'sbs'
+  };
+  var HIDDEN_PACKAGES = [
+    'com.cleanframe.tv',
+    'com.ansub.tvhome',
+    'com.google.android.apps.tv.launcherx',
+    'com.google.android.tungsten.setupwraith',
+    'com.android.tv.settings'
+  ];
+  var DEFAULT_NAMES = {
+    youtube: 'YouTube',
+    netflix: 'Netflix',
+    disneyplus: 'Disney+',
+    primevideo: 'Prime Video',
+    appletv: 'Apple TV',
+    stremio: 'Stremio',
+    plex: 'Plex',
+    youtubemusic: 'YouTube Music',
+    applemusic: 'Apple Music'
+  };
+
+  function bridge() { return window.AndroidBridge || null; }
   function unavailable(done) {
-    done({ message: 'Open CleanFrame on the TV to use this control.', detail: 'The web preview cannot control the TV.' });
+    done({ message: 'Open CleanFrame on the TV to use this control.', detail: 'The web preview cannot launch external TV apps.' });
   }
-  function failure(err) {
-    return { message: 'The TV could not open this screen.', detail: err && (err.message || err.name) || 'Try again, or press the remote’s Home button to return to CleanFrame.' };
+  function failure(detail) {
+    return { message: 'The TV could not open this app.', detail: detail || 'Check that the app is installed and enabled on your TV.' };
   }
-  function bounded(done) {
-    var finished = false, timer = setTimeout(function () { finish({ message: 'The TV did not respond. Please try again.' }); }, 8000);
-    function finish(err, value) { if (finished) return; finished = true; clearTimeout(timer); done(err, value); }
-    return finish;
-  }
+
   function launchApp(id, done) {
-    if (!api()) { unavailable(done); return; }
-    var finish = bounded(done);
-    try { api().launch(id, function () { finish(null); }, function (err) { finish(failure(err)); }); }
-    catch (err) { finish(failure(err)); }
+    var b = bridge();
+    if (!b || typeof b.launchApp !== 'function') { unavailable(done); return; }
+    try {
+      var ok = b.launchApp(String(id || ''));
+      done(ok ? null : failure('Package ' + id + ' could not be started.'));
+    } catch (err) {
+      done(failure(err && err.message));
+    }
   }
+
   function launch(brand, done) {
-    if (!IDS[brand]) { done({message: 'This app has no launch target.'}); return; }
+    if (!IDS[brand]) { done({ message: 'This app has no launch target.' }); return; }
     launchApp(IDS[brand], done);
   }
+
   function art(done) {
-    if (!api()) { unavailable(done); return; }
-    var finish = bounded(done);
-    try {
-      var data = [new tizen.ApplicationControlData('mode', ['fullscreen']), new tizen.ApplicationControlData('requester', ['mobile'])];
-      var control = new tizen.ApplicationControl('http://tizen.org/appcontrol/operation/default', null, null, null, data);
-      api().launchAppControl(control, 'org.tizen.art-app', function () { finish(null); }, function (err) { finish(failure(err)); });
-    } catch (err) { finish(failure(err)); }
+    if (typeof window.CleanFrameEnterArtMode === 'function') {
+      window.CleanFrameEnterArtMode();
+      done(null);
+      return;
+    }
+    done(null);
   }
-  function home(done) { launchApp('com.samsung.tv.csfs', done); }
-  function settings(done) { launchApp('com.samsung.tv.coba.setting', done); }
-  function apps(done) {
-    if (!api()) { unavailable(done); return; }
-    var finish = bounded(done);
+
+  function home(done) {
+    var b = bridge();
+    if (!b || typeof b.openGoogleTvHome !== 'function') { unavailable(done); return; }
     try {
-      api().getAppsInfo(function (list) {
-        var known = {}, seen = {}, result = [];
-        Object.keys(IDS).forEach(function (brand) { known[IDS[brand]] = brand; });
-        list.forEach(function (a) {
-          var primary = !!known[a.id], stream = STREAMING.indexOf(a.id) >= 0;
-          var consumer = /^[A-Za-z0-9]{10}\.[A-Za-z0-9_-]+$/.test(a.id) || CONSUMER_SYSTEM.indexOf(a.id) >= 0;
-          if (a.id === SELF || INTERNAL.indexOf(a.id) >= 0 || seen[a.id] || !a.name || (!primary && !stream && (!a.show || !consumer))) return;
-          if (!primary && /(?:service|worker|preview|promotion|plugin|launcher|test|sdk|^ep[ -]|factory|daemon)/i.test(a.name + ' ' + a.id)) return;
-          if (/-dummy$/.test(a.id) || a.id === 'com.samsung.tv.cobalt-yt') return;
-          seen[a.id] = true;
-          result.push({ appId: a.id, name: a.name, brand: known[a.id] || EXTRA_BRANDS[a.id] || '', icon: a.iconPath || '', rank: primary ? Object.keys(IDS).indexOf(known[a.id]) : (stream ? 20 : 30) });
+      var ok = b.openGoogleTvHome();
+      done(ok ? null : failure('Could not open default TV Home.'));
+    } catch (err) {
+      done(failure(err && err.message));
+    }
+  }
+
+  function settings(done) {
+    var b = bridge();
+    if (!b || typeof b.openTvSettings !== 'function') { unavailable(done); return; }
+    try {
+      var ok = b.openTvSettings();
+      done(ok ? null : failure('Could not open TV Settings.'));
+    } catch (err) {
+      done(failure(err && err.message));
+    }
+  }
+
+  function readInstalledSync() {
+    var b = bridge(), known = {}, seen = {}, result = [];
+    var brandOrder = Object.keys(IDS);
+    brandOrder.forEach(function (brand) { known[IDS[brand]] = brand; });
+    if (!b || typeof b.getInstalledApps !== 'function') return null;
+    try {
+      var raw = b.getInstalledApps();
+      var list = JSON.parse(raw || '[]');
+      list.forEach(function (a) {
+        if (!a || !a.appId || seen[a.appId] || HIDDEN_PACKAGES.indexOf(a.appId) >= 0) return;
+        var brand = known[a.appId] || EXTRA_BRANDS[a.appId] || '';
+        var primaryIdx = brand ? brandOrder.indexOf(brand) : -1;
+        seen[a.appId] = true;
+        result.push({
+          appId: a.appId,
+          name: primaryIdx >= 0 ? DEFAULT_NAMES[brand] : (a.name || a.appId),
+          brand: brand,
+          icon: a.icon || '',
+          rank: primaryIdx >= 0 ? primaryIdx : (brand ? 12 : 20)
         });
-        result.sort(function (a, b) { return a.rank - b.rank || a.name.toLowerCase().localeCompare(b.name.toLowerCase()); });
-        finish(null, result);
-      }, function (err) { finish(failure(err)); });
-    } catch (err) { finish(failure(err)); }
+      });
+      result.sort(function (a, b) { return a.rank - b.rank || a.name.toLowerCase().localeCompare(b.name.toLowerCase()); });
+      return result;
+    } catch (err) {
+      return null;
+    }
   }
-  window.FrameDevice = { launch: launch, launchApp: launchApp, art: art, home: home, settings: settings, apps: apps };
+
+  function apps(done) {
+    var installed = readInstalledSync();
+    if (installed) {
+      done(null, installed);
+      return;
+    }
+    if (bridge()) {
+      done(failure('Could not read installed apps from AndroidBridge.'));
+      return;
+    }
+    var brandOrder = Object.keys(IDS), result = [];
+    brandOrder.forEach(function (brand, idx) {
+      result.push({
+        appId: IDS[brand],
+        name: DEFAULT_NAMES[brand],
+        brand: brand,
+        icon: '',
+        rank: idx
+      });
+    });
+    done(null, result);
+  }
+
+  window.FrameDevice = {
+    launch: launch,
+    launchApp: launchApp,
+    art: art,
+    home: home,
+    settings: settings,
+    apps: apps,
+    initialApps: readInstalledSync
+  };
 }());

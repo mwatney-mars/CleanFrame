@@ -27,3 +27,9 @@ PP*.woff2
 /explorations/
 /docs/research/
 /docs/articles/
+
+# Android TV / Google TV build artifacts and signing keys
+/android/build/
+/android/out/
+/android/assets/
+*.keystore
