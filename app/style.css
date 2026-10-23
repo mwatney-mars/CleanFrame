@@ -117,6 +117,7 @@ html,body{position:fixed;inset:0;width:100%;height:100%;overflow:hidden;backgrou
 .monogram{display:flex;align-items:center;justify-content:center;font-weight:600;letter-spacing:0;color:inherit}
 .monogram span{position:relative;width:1.65em;height:1.65em;display:flex;align-items:center;justify-content:center;border-radius:.4em}.monogram span::after{content:"";position:absolute;inset:0;border:2px solid currentColor;border-radius:inherit;opacity:.38}
 .native-icon img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
+.native-icon.is-bw img{filter:grayscale(1) contrast(1.15);border-radius:22%}
 .native-icon.has-native-icon>span{visibility:hidden}
 .tile .mark{position:absolute;left:84px;top:34px;opacity:.84;transition:opacity 160ms linear,transform var(--t) var(--ease)}
 .tile .label{position:absolute;left:4px;right:4px;top:128px;text-align:center;font-size:36px;line-height:44px;letter-spacing:-.8px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;opacity:.84;transition:opacity 160ms linear}
@@ -512,8 +513,11 @@ html,body{position:fixed;inset:0;width:100%;height:100%;overflow:hidden;backgrou
 .is-horizontal .setting-tick{width:26px;margin-left:0}
 .is-horizontal .setting-tick .ico{width:26px;height:26px}
 .section-material .setting-choice:last-child{flex:1.4}
+.section-icons .setting-choice:first-child{flex:1.3}
 .detail-background .section-rotation .setting-choice{padding-left:128px}
-.detail-layout .setting-section+.setting-section,.detail-clock .setting-section+.setting-section,.detail-focus .setting-section+.setting-section{margin-top:64px}
+.detail-layout .setting-section+.setting-section{margin-top:36px}
+.detail-layout .is-horizontal .setting-choice{min-height:84px}
+.detail-clock .setting-section+.setting-section,.detail-focus .setting-section+.setting-section{margin-top:64px}
 .detail-typography .setting-choice,.detail-rotation .setting-choice{min-height:88px}
 .detail-typography .appearance-rows,.detail-rotation .appearance-rows,.detail-samsung .appearance-rows{top:260px}
 .setting-choice.has-description{min-height:120px}

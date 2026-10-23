@@ -13,7 +13,7 @@ Originally created by [nthnclrk](https://github.com/nthnclrk/CleanFrame) for Sam
 - **Native Google TV & Android TV App (`android/`)**:
   - Hardware-accelerated fullscreen WebView wrapper (`com.cleanframe.tv`) with zero-config `1920×1080` viewport scaling across 1080p and 4K TVs.
   - **Automatic First-Launch App Discovery**: Queries Android's `PackageManager` for all installed TV (`LEANBACK_LAUNCHER`) and standard (`LAUNCHER`) apps. On first launch, CleanFrame automatically populates your Home bar with the apps installed on your TV.
-  - **Hybrid Icon Rendering**: Uses crisp monochrome vector SVGs for popular streaming apps (YouTube, Netflix, Disney+, Prime Video, Apple TV, Stremio, Plex, YouTube Music, Spotify, Max, Tubi, Apple Music, Downloader) and automatically extracts native app icons from Android `PackageManager` for any other installed app.
+  - **Automatic Monochrome Logo Extraction & Icon Style Toggle**: Uses crisp bundled vector SVGs for popular streaming apps (YouTube, Netflix, Disney+, Prime Video, Apple TV, Stremio, Plex, YouTube Music, Spotify, Max, Tubi, Apple Music, Downloader) and automatically extracts clean monochrome silhouettes from **any other installed Android app** (inspecting `AdaptiveIconDrawable` monochrome/foreground layers, stripping solid or gradient icon cards, auto-cropping, and matching CleanFrame's optical icon weight and adaptive theme ink). Prefer full-color icons for third-party apps? Switch **Icon style** between **Monochrome** and **Original** under **Settings → Layout**.
   - **Full Remote D-Pad & Back Key Bridge**: Native Android key interception translates D-pad navigation, Center/Enter, and Back/Escape directly to CleanFrame's spatial navigation engine.
   - **Zero Background Overhead**: Automatically suspends WebView rendering and clock timers when another app is in the foreground (`onStop` / `visibilitychange`).
 - **12-Hour / 24-Hour Time Format & Optional Date Display**:
@@ -116,7 +116,7 @@ Open [http://localhost:4795/home/](http://localhost:4795/home/). Use the arrow k
 
 ## What You Can Customize in CleanFrame
 
-- **Layout**: Choose a **List** or **Dock** layout, displaying icons, app names, or both.
+- **Layout & Icon Style**: Choose a **List** or **Dock** layout, display icons, app names, or both, and switch **Icon style** between **Monochrome** (automatic B&W silhouettes) and **Original** color icons.
 - **Backdrop & Theme**: Use a curated photograph, or a minimal light or dark background.
 - **Clock & Date**: Switch between **12-hour** and **24-hour** clock formats, and toggle the **Date** display (`Off` / `On`).
 - **Materials & Typography**: Adjust glass material presets (`Soft`, `Blur`, `Frost`, `Clear`), focus styles, and typography (`Manrope`, `Geist`, `Newsreader`).

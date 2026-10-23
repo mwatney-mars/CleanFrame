@@ -114,6 +114,10 @@
           name: primaryIdx >= 0 ? DEFAULT_NAMES[brand] : (a.name || a.appId),
           brand: brand,
           icon: a.icon || '',
+          monoIcon: a.monoIcon || '',
+          monoW: a.monoW || 0,
+          monoH: a.monoH || 0,
+          monoFill: a.monoFill || 0,
           rank: primaryIdx >= 0 ? primaryIdx : (brand ? 12 : 20)
         });
       });
