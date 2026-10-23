@@ -14,15 +14,15 @@
   var FULL = 'Home holds twelve apps. Remove one first.', LAST = 'Home needs one app';
 
   var PRIMARY_APPS = [
-    { id: 'youtube', name: 'YouTube', mark: true, appId: 'com.google.android.youtube.tv' },
-    { id: 'netflix', name: 'Netflix', mark: true, appId: 'com.netflix.ninja' },
-    { id: 'disneyplus', name: 'Disney+', mark: true, appId: 'com.disney.disneyplus' },
-    { id: 'primevideo', name: 'Prime Video', mark: true, appId: 'com.amazon.amazonvideo.livingroom' },
-    { id: 'appletv', name: 'Apple TV', mark: true, appId: 'com.apple.atve.androidtv.appletv' },
-    { id: 'stremio', name: 'Stremio', mark: true, appId: 'com.stremio.one' },
-    { id: 'plex', name: 'Plex', mark: true, appId: 'com.plexapp.android' },
-    { id: 'youtubemusic', name: 'YouTube Music', mark: true, appId: 'com.google.android.youtube.tvmusic' },
-    { id: 'applemusic', name: 'Apple Music', mark: true, appId: 'com.apple.android.music' }
+    { id: 'youtube', name: 'YouTube', appId: 'com.google.android.youtube.tv' },
+    { id: 'netflix', name: 'Netflix', appId: 'com.netflix.ninja' },
+    { id: 'disneyplus', name: 'Disney+', appId: 'com.disney.disneyplus' },
+    { id: 'primevideo', name: 'Prime Video', appId: 'com.amazon.amazonvideo.livingroom' },
+    { id: 'appletv', name: 'Apple TV', appId: 'com.apple.atve.androidtv.appletv' },
+    { id: 'stremio', name: 'Stremio', appId: 'com.stremio.one' },
+    { id: 'plex', name: 'Plex', appId: 'com.plexapp.android' },
+    { id: 'youtubemusic', name: 'YouTube Music', appId: 'com.google.android.youtube.tvmusic' },
+    { id: 'applemusic', name: 'Apple Music', appId: 'com.apple.android.music' }
   ];
   var PRIMARY = PRIMARY_APPS.map(function (a) { return a.id; }), APPS = PRIMARY_APPS.slice(), ALPHA = [];
   var WALLS = window.CleanFrameWallpapers || [{ id: 'misty', name: 'Misty coast', tone: 'light', ut: { tr: 'mist', br: 'mist' }, frostVeil: .20 }];
@@ -117,29 +117,7 @@
   }
   function log(text) { S.log.unshift('#' + (++S.logN) + ' ' + text); if (S.log.length > 10) S.log.pop(); }
 
-  var maskSupport = 'webkitMaskImage' in document.documentElement.style || 'maskImage' in document.documentElement.style, markProbes = {};
-  function probeMark(id) {
-    if (markProbes[id]) return;
-    var im = new Image(); markProbes[id] = 'loading';
-    im.onload = function () { markProbes[id] = 'ok'; };
-    im.onerror = function () {
-      markProbes[id] = 'bad';
-      Array.prototype.forEach.call(document.querySelectorAll('[data-mark="' + id + '"]'), function (el) { el.className += ' is-bad'; });
-    };
-    im.src = ICONS + id + '.svg';
-  }
-  /* Optical placement is identical for the CSS mask and the image fallback. */
-  function markHtml(id, w, h, size) {
-    var m = window.FrameIconMetrics && window.FrameIconMetrics[id], st;
-    if (m) {
-      var weight = clamp(Math.pow(0.45 / m.fill, 0.3), 0.84, 1.25);
-      var k = Math.min(w / m.w, h / m.h, size * weight / Math.sqrt(m.w * m.h)), s = m.n * k;
-      st = 'width:' + px(s) + ';height:' + px(s) + ';left:' + px(w / 2 - (m.x + m.w / 2) * k) + ';top:' + px(h / 2 - (m.y + m.h / 2) * k);
-    } else st = 'width:' + w + 'px;height:' + h + 'px;left:0;top:0;object-fit:contain';
-    probeMark(id);
-    return '<span class="mark' + (markProbes[id] === 'bad' ? ' is-bad' : '') + '" data-mark="' + id + '" style="width:' + w + 'px;height:' + h + 'px">'
-      + (maskSupport ? '<span class="mk" style="' + st + ';-webkit-mask-image:url(' + ICONS + id + '.svg);mask-image:url(' + ICONS + id + '.svg)"></span>' : '<img alt="" src="' + ICONS + id + '.svg" style="' + st + '">') + '</span>';
-  }
+  var maskSupport = 'webkitMaskImage' in document.documentElement.style || 'maskImage' in document.documentElement.style;
   function monoMarkHtml(a, w, h, size) {
     var mw = a.monoW || 1, mh = a.monoH || 1, fill = a.monoFill || 0.45;
     var weight = clamp(Math.pow(0.45 / fill, 0.3), 0.84, 1.25);
@@ -149,7 +127,6 @@
   }
   function appMark(a, w, h, size) {
     var bw = !S.c || S.c.icons !== 'color';
-    if (a.mark && (bw || !a.icon) && (maskSupport || S.c.bg !== 'light')) return markHtml(a.brand || a.id, w, h, size);
     if (bw && a.monoIcon && maskSupport) return monoMarkHtml(a, w, h, size);
     var words = a.name.split(/\s+/), letters = words[0].charAt(0) + (words.length > 1 ? words[1].charAt(0) : '');
     return '<span class="mark monogram' + (a.icon ? ' native-icon' + (bw ? ' is-bw' : '') : '') + '" style="width:' + w + 'px;height:' + h + 'px;font-size:' + Math.round(size * .65) + 'px"><span>' + esc(letters.toUpperCase()) + '</span>'
@@ -336,34 +313,42 @@
     }
     return null;
   }
-  var EXTRA_MARKS = ['hbomax', 'spotify', 'tubi', 'downloader', 'abciview', 'sbs'];
   function clean(saved) {
     var s = saved && typeof saved === 'object' ? saved : {}, modern = s.look && typeof s.look === 'object' ? s.look : s;
     var legacyList = s.theme === 'list', h = [], recent = [], records = Array.isArray(s.appRecords) ? s.appRecords : [], needDefaultHome;
     records.slice(0, 256).forEach(function (a) {
       if (!a || !safeId(a.id) || !safeId(a.appId) || typeof a.name !== 'string' || !a.name.trim() || app(a.id)) return;
-      APPS.push({ id: a.id, appId: a.appId, name: a.name.slice(0, 160), brand: EXTRA_MARKS.indexOf(a.brand) >= 0 ? a.brand : '', mark: EXTRA_MARKS.indexOf(a.brand) >= 0, icon: safeIcon(a.icon), monoIcon: safeIcon(a.monoIcon), monoW: safeNum(a.monoW), monoH: safeNum(a.monoH), monoFill: safeNum(a.monoFill) });
+      APPS.push({ id: a.id, appId: a.appId, name: a.name.slice(0, 160), brand: a.brand || '', icon: safeIcon(a.icon), monoIcon: safeIcon(a.monoIcon), monoW: safeNum(a.monoW), monoH: safeNum(a.monoH), monoFill: safeNum(a.monoFill) });
     });
     (Array.isArray(s.home) ? s.home : Array.isArray(s.dock) ? s.dock : []).forEach(function (id) {
       if (!safeId(id) || h.indexOf(id) >= 0 || h.length >= CAP) return;
-      if (!app(id) && id.indexOf('.') > 0) APPS.push({ id: id, appId: id, name: id.split('.').pop(), mark: false });
+      if (!app(id) && id.indexOf('.') > 0) APPS.push({ id: id, appId: id, name: id.split('.').pop() });
       if (app(id)) h.push(id);
     });
     needDefaultHome = !h.length;
     if (window.FrameDevice && typeof window.FrameDevice.initialApps === 'function') {
       var installed = window.FrameDevice.initialApps();
       if (installed && installed.length) {
+        var installedMap = {};
         installed.forEach(function (entry) {
           var id = PRIMARY.indexOf(entry.brand) >= 0 ? entry.brand : entry.appId, a;
           if (!safeId(id) || !safeId(entry.appId)) return;
+          installedMap[id] = true;
           a = app(id);
           if (!a) { a = { id: id }; APPS.push(a); }
-          a.appId = entry.appId; a.brand = entry.brand || ''; a.mark = !!entry.brand;
+          a.appId = entry.appId; a.brand = entry.brand || '';
           a.icon = safeIcon(entry.icon);
           a.monoIcon = safeIcon(entry.monoIcon); a.monoW = safeNum(entry.monoW); a.monoH = safeNum(entry.monoH); a.monoFill = safeNum(entry.monoFill);
           a.name = PRIMARY.indexOf(id) >= 0 ? PRIMARY_APPS[PRIMARY.indexOf(id)].name : String(entry.name).slice(0, 160);
           if (needDefaultHome && h.length < CAP && h.indexOf(id) < 0) h.push(id);
         });
+        h = h.filter(function (id) { return !!installedMap[id]; });
+        if (!h.length) {
+          installed.forEach(function (entry) {
+            var id = PRIMARY.indexOf(entry.brand) >= 0 ? entry.brand : entry.appId;
+            if (safeId(id) && h.length < CAP && h.indexOf(id) < 0) h.push(id);
+          });
+        }
       }
     }
     if (!h.length) h = PRIMARY.slice();
@@ -508,7 +493,7 @@
         if (!safeId(id) || !safeId(entry.appId) || ALPHA.indexOf(id) >= 0) return;
         a = app(id);
         if (!a) { a = { id: id }; APPS.push(a); }
-        a.appId = entry.appId; a.brand = entry.brand || ''; a.mark = !!entry.brand;
+        a.appId = entry.appId; a.brand = entry.brand || '';
         a.icon = safeIcon(entry.icon);
         a.monoIcon = safeIcon(entry.monoIcon); a.monoW = safeNum(entry.monoW); a.monoH = safeNum(entry.monoH); a.monoFill = safeNum(entry.monoFill);
         a.name = PRIMARY.indexOf(id) >= 0 ? PRIMARY_APPS[PRIMARY.indexOf(id)].name : String(entry.name).slice(0, 160);
@@ -1278,7 +1263,7 @@
       var lifted = hs.lifted && i === anchor, partial = g.broad && (left - off < -1 || left + g.tw - off > g.shelf + 1);
       setContent(el, it.kind + '|' + (it.id || '') + '|' + (it.id ? dockLabelSize(it.id) : full) + '|' + S.c.bg + '|' + S.c.apps + '|' + S.c.icons + '|' + homeFont(), '<span class="tile-content">' + dockTileHtml(it, full) + '</span>');
       el.className = 'tile k-' + it.kind + (focus ? ' is-focus' : '') + (sel ? ' is-sel' : '') + (lifted ? ' is-lifted' : '') + (partial ? ' is-partial' : '')
-        + (a && !a.mark ? ' is-text' : '') + (it.kind === 'add' && full ? ' is-full' : '') + (it.kind === 'app' && S.press === it.id ? ' is-press' : '')
+        + (a && !(a.monoIcon || a.icon) ? ' is-text' : '') + (it.kind === 'add' && full ? ' is-full' : '') + (it.kind === 'app' && S.press === it.id ? ' is-press' : '')
         + (lifted && i === 0 ? ' no-l' : '') + (lifted && i >= ns - 1 ? ' no-r' : '');
       el.style.transform = 'translate3d(' + left + 'px,0,0)';
       el.setAttribute('role', 'button');

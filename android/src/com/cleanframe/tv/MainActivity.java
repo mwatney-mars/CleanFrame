@@ -37,24 +37,6 @@ public class MainActivity extends Activity {
 
     private WebView webView;
 
-    private static final Set<String> BUNDLED_SVG_PACKAGES = new HashSet<>(Arrays.asList(
-            "com.stremio.one",
-            "com.netflix.ninja",
-            "com.disney.disneyplus",
-            "com.google.android.youtube.tv",
-            "com.amazon.amazonvideo.livingroom",
-            "com.apple.atve.androidtv.appletv",
-            "com.plexapp.android",
-            "com.google.android.youtube.tvmusic",
-            "com.esaba.downloader",
-            "com.spotify.tv.android",
-            "com.spotify.music",
-            "com.wbd.stream",
-            "com.hbo.hbonow",
-            "com.tubitv",
-            "com.apple.android.music"
-    ));
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -314,18 +296,16 @@ public class MainActivity extends Activity {
                         JSONObject obj = new JSONObject();
                         obj.put("appId", pkg);
                         obj.put("name", label);
-                        if (!BUNDLED_SVG_PACKAGES.contains(pkg)) {
-                            String iconData = loadIconDataUri(info, pm);
-                            if (!iconData.isEmpty()) {
-                                obj.put("icon", iconData);
-                            }
-                            MonoResult mono = loadMonoIcon(info, pm, pkg);
-                            if (mono != null && !mono.dataUri.isEmpty()) {
-                                obj.put("monoIcon", mono.dataUri);
-                                obj.put("monoW", mono.width);
-                                obj.put("monoH", mono.height);
-                                obj.put("monoFill", Math.round(mono.fill * 1000.0) / 1000.0);
-                            }
+                        String iconData = loadIconDataUri(info, pm);
+                        if (!iconData.isEmpty()) {
+                            obj.put("icon", iconData);
+                        }
+                        MonoResult mono = loadMonoIcon(info, pm, pkg);
+                        if (mono != null && !mono.dataUri.isEmpty()) {
+                            obj.put("monoIcon", mono.dataUri);
+                            obj.put("monoW", mono.width);
+                            obj.put("monoH", mono.height);
+                            obj.put("monoFill", Math.round(mono.fill * 1000.0) / 1000.0);
                         }
                         array.put(obj);
                     }
@@ -437,8 +417,8 @@ public class MainActivity extends Activity {
                 alpha[i] = (px[i] >>> 24) & 0xFF;
             }
 
+            boolean strippedAny = false;
             if (!isMonoLayer) {
-                boolean strippedAny = false;
                 for (int pass = 0; pass < 2; pass++) {
                     int minX = N, maxX = -1, minY = N, maxY = -1, vis = 0;
                     for (int y = 0; y < N; y++) {
@@ -594,7 +574,7 @@ public class MainActivity extends Activity {
                     float contrastRatio = (float) contrastCount / (float) bboxArea;
 
                     if (maxDist < 55f || contrastRatio < 0.015f) {
-                        if (bboxFill >= 0.76f) return null;
+                        if (pass == 0 && bboxFill >= 0.76f) return null;
                         break;
                     }
                     if (contrastRatio > 0.74f) {
@@ -662,7 +642,7 @@ public class MainActivity extends Activity {
             if (cropW < 8 || cropH < 8) return null;
 
             double fill = (double) sumAlpha / (double) (cropW * cropH * 255.0);
-            if (fill < 0.05 || fill > 0.88) {
+            if (fill < 0.05 || fill > (strippedAny ? 0.94 : 0.88)) {
                 return null;
             }
 
@@ -746,24 +726,136 @@ public class MainActivity extends Activity {
 
         private static void punchInternalCutouts(int[] px, int[] alpha, int N) {
             int[] dist = computeExteriorDistance(alpha, N);
-            int opaque = 0, bright = 0, darkInterior = 0;
-            for (int i = 0; i < px.length; i++) {
-                if (alpha[i] >= 128) {
-                    opaque++;
-                    int c = px[i];
-                    int lum = (((c >> 16) & 0xFF) * 77 + ((c >> 8) & 0xFF) * 150 + (c & 0xFF) * 29) >> 8;
-                    if (lum >= 185) bright++;
-                    else if (lum <= 75 && dist[i] >= 2) darkInterior++;
+            int minX = N, maxX = -1, minY = N, maxY = -1, opaque = 0;
+            for (int y = 0; y < N; y++) {
+                int row = y * N;
+                for (int x = 0; x < N; x++) {
+                    if (alpha[row + x] >= 128) {
+                        if (x < minX) minX = x;
+                        if (x > maxX) maxX = x;
+                        if (y < minY) minY = y;
+                        if (y > maxY) maxY = y;
+                        opaque++;
+                    }
                 }
             }
-            if (opaque > 40 && bright >= opaque * 0.65 && darkInterior >= opaque * 0.02 && darkInterior <= opaque * 0.30) {
-                for (int i = 0; i < px.length; i++) {
-                    if (alpha[i] > 0 && dist[i] >= 2) {
-                        int c = px[i];
-                        int lum = (((c >> 16) & 0xFF) * 77 + ((c >> 8) & 0xFF) * 150 + (c & 0xFF) * 29) >> 8;
-                        if (lum < 160) {
-                            int factor = Math.max(0, Math.min(255, (lum - 40) * 255 / 120));
-                            alpha[i] = (alpha[i] * factor) / 255;
+            if (opaque < 60 || maxX <= minX || maxY <= minY) return;
+            int bboxW = maxX - minX + 1;
+            int bboxH = maxY - minY + 1;
+            int midX = (minX + maxX) / 2;
+            int midY = (minY + maxY) / 2;
+
+            int[][] qR = new int[4][512];
+            int[][] qG = new int[4][512];
+            int[][] qB = new int[4][512];
+            int[] qCount = new int[4];
+            int ringCount = 0;
+
+            for (int y = minY; y <= maxY; y++) {
+                int row = y * N;
+                for (int x = minX; x <= maxX; x++) {
+                    int idx = row + x;
+                    int d = dist[idx];
+                    if (d >= 2 && d <= 4 && alpha[idx] >= 128) {
+                        int q = (y <= midY ? 0 : 2) + (x <= midX ? 0 : 1);
+                        int c = px[idx];
+                        int cnt = qCount[q];
+                        if (cnt < 512) {
+                            qR[q][cnt] = (c >> 16) & 0xFF;
+                            qG[q][cnt] = (c >> 8) & 0xFF;
+                            qB[q][cnt] = c & 0xFF;
+                            qCount[q] = cnt + 1;
+                        }
+                        ringCount++;
+                    }
+                }
+            }
+            if (ringCount < 24) return;
+
+            float[] medR = new float[4];
+            float[] medG = new float[4];
+            float[] medB = new float[4];
+            float fallbackR = 0, fallbackG = 0, fallbackB = 0;
+            int validQ = 0;
+            for (int q = 0; q < 4; q++) {
+                if (qCount[q] >= 4) {
+                    medR[q] = median(qR[q], qCount[q]);
+                    medG[q] = median(qG[q], qCount[q]);
+                    medB[q] = median(qB[q], qCount[q]);
+                    fallbackR += medR[q];
+                    fallbackG += medG[q];
+                    fallbackB += medB[q];
+                    validQ++;
+                } else {
+                    medR[q] = -1;
+                }
+            }
+            if (validQ == 0) return;
+            fallbackR /= validQ;
+            fallbackG /= validQ;
+            fallbackB /= validQ;
+            for (int q = 0; q < 4; q++) {
+                if (medR[q] < 0) {
+                    medR[q] = fallbackR;
+                    medG[q] = fallbackG;
+                    medB[q] = fallbackB;
+                }
+            }
+
+            float maxQDiff = 0;
+            for (int a = 0; a < 4; a++) {
+                for (int b = a + 1; b < 4; b++) {
+                    float diff = colorDist(medR[a], medG[a], medB[a], medR[b], medG[b], medB[b]);
+                    if (diff > maxQDiff) maxQDiff = diff;
+                }
+            }
+            if (maxQDiff > 140f) return;
+
+            int matchRing = 0;
+            int contrastInterior = 0;
+            for (int y = minY; y <= maxY; y++) {
+                float v = (float) (y - minY) / Math.max(1, bboxH - 1);
+                int row = y * N;
+                for (int x = minX; x <= maxX; x++) {
+                    int idx = row + x;
+                    if (alpha[idx] >= 128) {
+                        int d = dist[idx];
+                        float u = (float) (x - minX) / Math.max(1, bboxW - 1);
+                        float bgR = bilerp(medR, u, v);
+                        float bgG = bilerp(medG, u, v);
+                        float bgB = bilerp(medB, u, v);
+                        int c = px[idx];
+                        float cd = colorDist((c >> 16) & 0xFF, (c >> 8) & 0xFF, c & 0xFF, bgR, bgG, bgB);
+                        if (d >= 2 && d <= 4 && cd <= 48f) {
+                            matchRing++;
+                        } else if (d >= 5 && cd >= 75f) {
+                            contrastInterior++;
+                        }
+                    }
+                }
+            }
+
+            if ((float) matchRing / (float) ringCount >= 0.78f
+                    && contrastInterior >= opaque * 0.015f
+                    && contrastInterior <= opaque * 0.38f) {
+                for (int y = minY; y <= maxY; y++) {
+                    float v = (float) (y - minY) / Math.max(1, bboxH - 1);
+                    int row = y * N;
+                    for (int x = minX; x <= maxX; x++) {
+                        int idx = row + x;
+                        if (alpha[idx] > 0 && dist[idx] >= 4) {
+                            float u = (float) (x - minX) / Math.max(1, bboxW - 1);
+                            float bgR = bilerp(medR, u, v);
+                            float bgG = bilerp(medG, u, v);
+                            float bgB = bilerp(medB, u, v);
+                            int c = px[idx];
+                            float cd = colorDist((c >> 16) & 0xFF, (c >> 8) & 0xFF, c & 0xFF, bgR, bgG, bgB);
+                            if (cd >= 100f) {
+                                alpha[idx] = 0;
+                            } else if (cd > 55f) {
+                                int factor = Math.round(255f * (100f - cd) / 45f);
+                                alpha[idx] = (alpha[idx] * factor) / 255;
+                            }
                         }
                     }
                 }

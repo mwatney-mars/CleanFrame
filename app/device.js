@@ -12,16 +12,6 @@
     youtubemusic: 'com.google.android.youtube.tvmusic',
     applemusic: 'com.apple.android.music'
   };
-  var EXTRA_BRANDS = {
-    'com.spotify.tv.android': 'spotify',
-    'com.spotify.music': 'spotify',
-    'com.wbd.stream': 'hbomax',
-    'com.hbo.hbonow': 'hbomax',
-    'com.tubitv': 'tubi',
-    'com.esaba.downloader': 'downloader',
-    'au.net.abc.iview': 'abciview',
-    'com.sbs.ondemand.tv': 'sbs'
-  };
   var HIDDEN_PACKAGES = [
     'com.cleanframe.tv',
     'com.ansub.tvhome',
@@ -106,7 +96,7 @@
       var list = JSON.parse(raw || '[]');
       list.forEach(function (a) {
         if (!a || !a.appId || seen[a.appId] || HIDDEN_PACKAGES.indexOf(a.appId) >= 0) return;
-        var brand = known[a.appId] || EXTRA_BRANDS[a.appId] || '';
+        var brand = known[a.appId] || '';
         var primaryIdx = brand ? brandOrder.indexOf(brand) : -1;
         seen[a.appId] = true;
         result.push({
@@ -118,7 +108,7 @@
           monoW: a.monoW || 0,
           monoH: a.monoH || 0,
           monoFill: a.monoFill || 0,
-          rank: primaryIdx >= 0 ? primaryIdx : (brand ? 12 : 20)
+          rank: primaryIdx >= 0 ? primaryIdx : 20
         });
       });
       result.sort(function (a, b) { return a.rank - b.rank || a.name.toLowerCase().localeCompare(b.name.toLowerCase()); });
