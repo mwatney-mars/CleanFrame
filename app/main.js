@@ -1277,7 +1277,7 @@
       dockEdgeUntil = Date.now() + 220;
       if (!dockEdgeFrame) dockEdgeFrame = window.requestAnimationFrame(trackDockEdges);
     }
-    plate.className = 'plate' + (!n || empty || hs.zone === null ? '' : hs.lifted ? ' on-lift' : tileFocus ? ' on-focus' : tileSel ? ' on-sel' : '');
+    plate.className = 'plate' + (!n || empty || hs.zone === null ? '' : hs.lifted ? ' on-lift' : S.c.focus === 'glass' && tileFocus ? ' on-focus' : S.c.focus === 'glass' && tileSel ? ' on-sel' : '');
     plate.style.transform = 'translate3d(' + (anchor * g.pitch) + 'px,0,0)';
 
     cueL.style.left = (g.x - 72) + 'px'; cueR.style.left = (g.x + g.w + 24) + 'px';
@@ -1919,7 +1919,8 @@
     return JSON.parse(JSON.stringify(out));
   };
   QA.where = function () {
-    var action = focusedAction(), active = stage.querySelectorAll('.is-focus[data-action]'), count = 0, name = '';
+    var root = isSettingsDetail(top()) ? appearanceEl : sheetEl.hidden ? homeEl : sheetEl;
+    var action = focusedAction(), active = root.querySelectorAll('.is-focus[data-action]'), count = 0, name = '';
     Array.prototype.forEach.call(active, function (el) { if (renderedAction(el)) { count++; if (el.getAttribute('data-action') === action) name = el.getAttribute('aria-label') || el.textContent.replace(/\s+/g, ' ').trim(); } });
     return { view: top().id, settingsGroup: top().id === 'wallpaper' ? 'wallpaper' : top().id === 'appearance' ? top().group : null, focus: name, focusAction: action, focusCount: count, wallpaper: S.wallShown, zone: top().f.zone || null };
   };
