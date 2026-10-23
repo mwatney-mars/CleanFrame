@@ -402,6 +402,7 @@ html,body{position:fixed;inset:0;width:100%;height:100%;overflow:hidden;backgrou
 .f-type .util-focus-label.is-on{transform:scale(1.05);transform-origin:50% 50%}
 .f-type.l-list .util-focus-label.is-on{transform-origin:100% 50%}
 .ut-lens{left:0;top:0;height:60px;border-radius:30px;pointer-events:none}
+.ut-lens.on-focus .ph-veil{background:var(--plate)}
 .l-list .ut-lens .scrim{display:none}
 .l-list .quiet-utils.is-both .u-label{max-width:330px}
 .l-list .quiet-utils.is-both .u .ico{width:36px;height:36px}
